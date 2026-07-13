@@ -1,41 +1,60 @@
-# Next.js on Netlify Platform Starter
+# TIMLUL.AI
 
-[Live Demo](https://nextjs-platform-starter.netlify.app/)
+אפליקציה מקומית לתמלול אוטומטי של פגישות Microsoft Teams, כולל זיהוי דובר לכל שורה (על סמך שם המשתמש שבו הוא נכנס ל-Teams). כל התמלולים נשמרים כקבצים על המחשב שלך בלבד — שום דבר לא נשלח לשרת חיצוני.
 
-A modern starter based on Next.js 14 (App Router), Tailwind, and [Netlify Core Primitives](https://docs.netlify.com/core/overview/#develop) (Edge Functions, Image CDN, Blob Store).
+## איך זה עובד
 
-In this site, Netlify Core Primitives are used both implictly for running Next.js features (e.g. Route Handlers, image optimization via `next/image`, and more) and also explicitly by the user code.
+Teams יודע לבד לזהות מי מדבר (לפי הכניסה לפגישה), ומאפשר לשמור תמלול עם ייחוס דובר לכל שורה, בלי צורך בהרשאות Azure/אדמין:
 
-Implicit usage means you're using any Next.js functionality and everything "just works" when deployed - all the plumbing is done for you. Explicit usage is framework-agnostic and typically provides more features than what Next.js exposes.
+1. בפגישת Teams לחצו על **&laquo;עוד פעולות&raquo;** (שלוש הנקודות).
+2. בחרו **&laquo;שפה ותמלול&raquo; ← &laquo;הפעלת תמלול&raquo;**.
+3. בסיום הפגישה, מאותו תפריט בחרו **&laquo;שמירת תמלול&raquo;** — קובץ `.vtt` יורד אוטומטית לתיקיית ההורדות שלכם, ובו כבר מופיע שם הדובר לכל שורה.
+4. TIMLUL.AI עוקב ברקע אחרי תיקיית ההורדות (או כל תיקייה אחרת שתגדירו), מזהה את הקובץ החדש, ומייצר ממנו תמלול מסודר ומעוצב לפי דובר — נשמר בתיקיית פלט משלו על המחשב.
 
-## Deploying to Netlify
+אפשר גם לייבא קובץ `.vtt` באופן ידני מהעמוד הראשי, אם הקובץ לא נמצא בתיקיית המעקב.
 
-This site requires [Netlify Next Runtime v5](https://docs.netlify.com/frameworks/next-js/overview/) for full functionality. That version is now being gradually rolled out to all Netlify accounts.
+## הרצה מקומית
 
-After deploying via the button below, please visit the **Site Overview** page for your new site to check whether it is already using the v5 runtime. If not, you'll be prompted to opt-in to to v5.
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/netlify-templates/next-platform-starter)
-
-## Developing Locally
-
-1. Clone this repository, then run `npm install` in its root directory.
-
-2. For the starter to have full functionality locally (e.g. edge functions, blob store), please ensure you have an up-to-date version of Netlify CLI. Run:
+האפליקציה צריכה לרוץ **על המחשב שלך** (לא בענן/Netlify), כי היא ניגשת לקבצים על הדיסק המקומי.
 
 ```
-npm install netlify-cli@latest -g
+npm install
+npm run dev
 ```
 
-3. Link your local repository to the deployed Netlify site. This will ensure you're using the same runtime version for both local development and your deployed site.
+ואז פתחו [http://localhost:3000](http://localhost:3000).
+
+לריצה קבועה ברקע (במקום `next dev`):
 
 ```
-netlify link
+npm run build
+npm run start
 ```
 
-4. Then, run the Next.js development server via Netlify CLI:
+## הגדרות
+
+בעמוד **הגדרות** (`/settings`) אפשר לשנות:
+
+- **תיקיית מעקב** — ברירת מחדל: תיקיית ההורדות שלך (`~/Downloads`).
+- **תיקיית פלט** — ברירת מחדל: `~/TIMLUL.AI Transcripts`. כאן נשמרים התמלולים המעובדים (Markdown, טקסט, ה-VTT המקורי, ומטא-דאטה).
+
+ההגדרות עצמן נשמרות בקובץ `~/.timlul-ai/config.json`.
+
+## מבנה תמלול שמור
+
+לכל פגישה נוצרת תיקייה משלה תחת תיקיית הפלט, לדוגמה:
 
 ```
-netlify dev
+2026-07-12_Weekly-Sync-Meeting/
+  meta.json        פרטי הפגישה (כותרת, תאריך, דוברים, משך)
+  cues.json        השורות המלאות עם דובר וזמן
+  transcript.md     תמלול מעוצב ב-Markdown
+  transcript.txt    תמלול כטקסט פשוט
+  original.vtt      קובץ ה-VTT המקורי מ-Teams
 ```
 
-If your browser doesn't navigate to the site automatically, visit [localhost:8888](http://localhost:8888).
+## פיתוח
+
+- Next.js 15 (App Router) + Tailwind CSS.
+- מעקב התיקייה רץ ברקע דרך [`chokidar`](https://github.com/paulmillr/chokidar), ומופעל פעם אחת בעליית השרת דרך [`instrumentation.js`](./instrumentation.js).
+- לוגיקת הליבה (פענוח VTT, שמירה, רשימת תמלולים) נמצאת ב-`lib/`.
