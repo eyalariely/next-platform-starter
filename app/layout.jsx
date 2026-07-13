@@ -4,14 +4,15 @@ import { Header } from '../components/header';
 
 export const metadata = {
     title: {
-        template: '%s | Netlify',
-        default: 'Netlify Starter'
-    }
+        template: '%s | TIMLUL.AI',
+        default: 'TIMLUL.AI - תמלול פגישות Teams'
+    },
+    description: 'תמלול אוטומטי של פגישות Teams עם זיהוי דוברים, נשמר מקומית על המחשב שלך.'
 };
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en">
+        <html lang="he" dir="rtl">
             <head>
                 <link rel="icon" href="/favicon.svg" sizes="any" />
             </head>

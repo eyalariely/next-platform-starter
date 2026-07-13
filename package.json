@@ -1,5 +1,5 @@
 {
-    "name": "next-netlify-platform-starter",
+    "name": "timlul-ai",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -9,14 +9,10 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@netlify/blobs": "^8.2.0",
-        "blobshape": "^1.0.0",
-        "bright": "^0.8.5",
-        "markdown-to-jsx": "^7.4.5",
+        "chokidar": "^4.0.3",
         "next": "15.3.5",
         "react": "18.3.1",
-        "react-dom": "18.3.1",
-        "unique-names-generator": "^4.7.1"
+        "react-dom": "18.3.1"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.0.15",
