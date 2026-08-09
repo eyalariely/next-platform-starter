@@ -4,8 +4,9 @@
 Hebrew RTL, מנועי חישוב פיננסיים דטרמיניסטיים, ושכבת AI נפרדת המיועדת
 להסברים בלבד (לעולם לא לחישוב).
 
-הפרויקט בנוי בשלבים (ראו `docs/DEVELOPMENT_PLAN.md`); **שלבים 1–2 הושלמו**
-(תשתית + ליבת ניהול תיק/עסקאות/Holdings Engine/Market Data).
+הפרויקט בנוי בשלבים (ראו `docs/DEVELOPMENT_PLAN.md`); **שלבים 1–3 הושלמו**
+(תשתית, ליבת תיק/עסקאות/Holdings, ועכשיו Performance Engine + Dashboard +
+Benchmarks + ניתוח נייר מלא).
 
 ## Stack
 
@@ -77,9 +78,16 @@ tests/
 
 ## מגבלות ידועות
 
-- מסכי Performance/Risk/Scenarios/Optimization/Watchlist/Investment
-  Plan/Macro/Advisor הם placeholders בלבד; `/securities/[ticker]` הוא
-  Skeleton (המימוש המלא מגיע בשלבים 3–10 לפי `docs/DEVELOPMENT_PLAN.md`).
+- מסכי Risk/Scenarios/Optimization/Watchlist/Investment Plan/Macro/Advisor
+  הם עדיין placeholders בלבד (המימוש המלא מגיע בשלבים 4–9 לפי
+  `docs/DEVELOPMENT_PLAN.md`). `/performance` הנפרד הוא placeholder גם כן —
+  הביצועים המרכזיים כבר חיים ב-`/dashboard` וב-`/securities/[ticker]`.
+- Benchmarks נתמכים דרך פרוקסי ETF (SPY/QQQ) כי Alpha Vantage בחינם לא
+  מגיש מדדים גולמיים (^GSPC וכו'); TA-125 דורש symbol שתלוי בזמינותו אצל
+  הספק בפועל.
+- היסטוריית מחירים מ-Alpha Vantage בחינם אינה Split/Dividend-adjusted
+  (`TIME_SERIES_DAILY_ADJUSTED` הפך ל-premium-only) — split של מניה יראה
+  כקפיצת מחיר לא רציפה בגרפים, מתועד ולא מוסתר.
 - לא בוצע חיבור בפועל למסד נתונים — נדרש `DATABASE_URL` אמיתי כדי להריץ
   `db:push`/`db:seed`/`dev` ולבדוק את הזרימה המלאה (כולל בדיקות E2E).
 - shadcn/ui CLI לא היה נגיש מסביבת הרשת הזו (`ui.shadcn.com` חסום ע"י

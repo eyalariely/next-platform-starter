@@ -13,6 +13,16 @@ import type { FxRatePoint } from "@/lib/financial/fx-engine";
 import { getCurrentPrice, getExchangeRates } from "@/services/market-data.service";
 import { getPortfolioForUser, PortfolioNotFoundError } from "@/services/portfolio.service";
 
+// Configurable "how old can a price be before we flag it Stale" threshold
+// (spec §28). Default of 4 days comfortably covers a weekend without
+// falsely flagging Friday's close as stale on a Monday morning.
+const STALE_PRICE_DAYS = Number(process.env.MARKET_DATA_STALE_DAYS ?? 4);
+
+function isPriceDateStale(isoDate: string): boolean {
+  const ageMs = Date.now() - new Date(`${isoDate}T00:00:00Z`).getTime();
+  return ageMs > STALE_PRICE_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export interface HoldingWithSecurity extends HoldingResult {
   security: {
     id: string;
@@ -95,7 +105,7 @@ export const getPortfolioSummary = cache(
       }));
 
     const stalePriceSecurityIds = priceResults
-      .filter((r) => r.cached?.stale)
+      .filter((r) => r.cached && (r.cached.stale || isPriceDateStale(r.cached.date)))
       .map((r) => r.security.id);
 
     const currencies = new Set<string>([portfolio.baseCurrency]);

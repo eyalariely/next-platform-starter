@@ -5,15 +5,14 @@ Staged build order (spec §65). Each stage must pass `typecheck`, `lint`,
 
 - [x] **שלב 1 — תשתית**: Project Scaffold, Database, Auth, Navigation, Core Types
 - [x] **שלב 2**: Portfolio + Transactions, Holdings Engine, Market Data Layer
-- [ ] **שלב 3**: Performance Engine, Dashboard, Benchmarks
-- [ ] **שלב 4**: Security Analysis (`/securities/[ticker]`)
-- [ ] **שלב 5**: Risk Engine, Risk Score
-- [ ] **שלב 6**: Risk Decision Support, What If, Simulator
-- [ ] **שלב 7**: Risk Monitoring, Snapshots, Alerts, Trend
-- [ ] **שלב 8**: Optimization, Scenario Center
-- [ ] **שלב 9**: Watchlist, Investment Plan, Macro, Settings (advanced)
-- [ ] **שלב 10**: AI Layer (Advisor, Security AI Summary)
-- [ ] **שלב 11**: Testing (full unit/regression/E2E), Performance, Security, Deployment
+- [x] **שלב 3**: Performance Engine, Dashboard, Benchmarks, Security Analysis (`/securities/[ticker]`)
+- [ ] **שלב 4**: Risk Engine (Volatility, Drawdown, Concentration, Correlation, Risk Contribution, Risk Score)
+- [ ] **שלב 5**: Risk Decision Support, What If, Simulator
+- [ ] **שלב 6**: Risk Monitoring, Snapshots, Alerts, Trend
+- [ ] **שלב 7**: Optimization, Scenario Center
+- [ ] **שלב 8**: Watchlist, Investment Plan, Macro, Settings (advanced)
+- [ ] **שלב 9**: AI Layer (Advisor, Security AI Summary)
+- [ ] **שלב 10**: Testing (full unit/regression/E2E), Performance, Security, Deployment
 
 ## מצב שלב 1 (הושלם)
 
@@ -61,9 +60,47 @@ Staged build order (spec §65). Each stage must pass `typecheck`, `lint`,
 - 78 unit tests total (Vitest), 3 E2E flows added (Playwright, not
   executed live in this sandbox — no DATABASE_URL available)
 
-## הבא בתור: שלב 3
+## מצב שלב 3 (הושלם)
 
-Performance Engine (`performanceEngine.ts`): historical portfolio value
-series, TWR (cash-flow neutral), daily/cumulative/monthly/annual returns.
-Benchmark Engine + config (S&P 500 / NASDAQ 100 / TA-125). Upgraded
-`/dashboard` and a fully built `/securities/[ticker]`.
+- `performance-engine.ts` (pure): `buildPortfolioValueSeries` (historical,
+  date-as-of valuation — never today's price for the past), `calculateReturns`
+  (daily TWR — cash-flow-neutral subperiod return, geometrically linked;
+  only DEPOSIT/WITHDRAWAL count as external cash flow, DIVIDEND is
+  internal per spec §4/§37), `calculatePeriodReturns` (1D/1W/1M/3M/YTD/1Y/
+  Since Inception, `null` when the series doesn't reach back far enough —
+  a real bug here, caught by tests, is documented in the commit),
+  `calculateMonthlyReturns`/`calculateAnnualReturns`
+- Golden test (spec §39) passes exactly: a 5% day + a $20k mid-period
+  deposit + a 0.952% day compounds to a 6.0% TWR, not the banned
+  `(current − invested) / invested` 5% figure
+- `benchmark-engine.ts` + `benchmark-config.ts` (SP500/NASDAQ100/TA125,
+  proxied via SPY/QQQ/TA125.TA): reuses `calculateReturns`/
+  `calculatePeriodReturns` directly (a benchmark return is the
+  cash-flow-free special case of a portfolio's), "local" vs
+  "portfolioCurrency" FX modes explicitly separated (spec §20)
+- `performance-contribution.ts` (pure): per-security return % and share
+  of total portfolio P/L — explicitly not Risk Contribution (spec §23)
+- `performance.service.ts` / `benchmark.service.ts`: DB-backed pipeline
+  (historical prices + FX via the existing market-data cache, extended
+  with `getBenchmarkHistoricalPrices`), request-memoized via `cache()`
+- `/dashboard` rebuilt per spec §41 order: value/P&L/TWR/YTD/cash/invested
+  cards → performance chart (value/return toggle, 1M–ALL range) →
+  portfolio-vs-benchmark chart with selector → period-return table → top
+  positive/negative contributors → allocation by security/sector/currency
+  → recent changes → data quality status. No Risk Score anywhere in it.
+- `/securities/[ticker]` fully built per spec §42 order: header → current
+  price (+ stale flag) → your position → P/L summary → price chart →
+  period returns (incl. "since first purchase") → portfolio contribution
+  → transactions → metadata (missing fields say "הנתון אינו זמין ממקור
+  הנתונים", never blank/fabricated)
+- Data quality status (`DataQualityStatus`): missing price/FX/benchmark
+  warnings + a configurable stale-price threshold (`MARKET_DATA_STALE_DAYS`)
+- 32 new unit tests (110 total, up from 78) — stage 2's 78 pass unchanged
+  (regression clean); 2 new E2E specs (not executed live — no DB here)
+
+## הבא בתור: שלב 4
+
+Risk Engine (`portfolioRiskEngine.ts`): volatility, covariance/correlation
+matrix, maximum drawdown, concentration (largest position, top-3, HHI),
+risk contribution (RC%, RC − weight). Risk Score (0-100, modular
+weighted breakdown, config in one file). No AI in the scoring itself.

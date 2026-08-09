@@ -234,3 +234,61 @@ export async function getExchangeRates(
     return cached.map((row) => ({ date: toIsoDate(row.date), rate: row.rate.toNumber(), stale: false }));
   }
 }
+
+export interface CachedBenchmarkPrice {
+  date: string;
+  close: number;
+}
+
+/**
+ * Historical daily closes for a benchmark, backed by the
+ * `benchmark_prices` cache — same "only call the provider when the
+ * cached range doesn't already cover the request" strategy as
+ * getHistoricalPrices (spec §34: "Benchmark Data יכול להשתמש באותה
+ * Historical Prices infrastructure").
+ */
+export async function getBenchmarkHistoricalPrices(
+  benchmarkId: string,
+  dataSymbol: string,
+  from: Date,
+  to: Date,
+): Promise<CachedBenchmarkPrice[]> {
+  const cached = await db.benchmarkPrice.findMany({
+    where: { benchmarkId, date: { gte: from, lte: to } },
+    orderBy: { date: "asc" },
+  });
+
+  const coversRange =
+    cached.length > 0 &&
+    cached[0].date.getTime() <= from.getTime() + ONE_DAY_MS &&
+    cached[cached.length - 1].date.getTime() >= to.getTime() - ONE_DAY_MS;
+
+  if (coversRange) {
+    return cached.map((row) => ({ date: toIsoDate(row.date), close: row.close.toNumber() }));
+  }
+
+  try {
+    const points = await getMarketDataProvider().getBenchmarkPrices(dataSymbol, from, to);
+    if (points.length === 0) {
+      return cached.map((row) => ({ date: toIsoDate(row.date), close: row.close.toNumber() }));
+    }
+
+    await Promise.all(
+      points.map((point) =>
+        db.benchmarkPrice.upsert({
+          where: { benchmarkId_date: { benchmarkId, date: new Date(`${point.date}T00:00:00Z`) } },
+          update: { close: point.close },
+          create: { benchmarkId, date: new Date(`${point.date}T00:00:00Z`), close: point.close },
+        }),
+      ),
+    );
+
+    const refreshed = await db.benchmarkPrice.findMany({
+      where: { benchmarkId, date: { gte: from, lte: to } },
+      orderBy: { date: "asc" },
+    });
+    return refreshed.map((row) => ({ date: toIsoDate(row.date), close: row.close.toNumber() }));
+  } catch {
+    return cached.map((row) => ({ date: toIsoDate(row.date), close: row.close.toNumber() }));
+  }
+}
