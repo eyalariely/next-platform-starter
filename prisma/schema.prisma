@@ -203,6 +203,10 @@ model MarketPrice {
   adjustedClose  Decimal? @db.Decimal(24, 8)
   volume         BigInt?
   currency       String
+  /** When this row was last (re)fetched from the provider — the basis for
+   *  the quote TTL check (spec §7), so "today" doesn't get refetched on
+   *  every request. */
+  updatedAt      DateTime @updatedAt
 
   security Security @relation(fields: [securityId], references: [id], onDelete: Cascade)
 

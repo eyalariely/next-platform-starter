@@ -4,8 +4,8 @@
 Hebrew RTL, מנועי חישוב פיננסיים דטרמיניסטיים, ושכבת AI נפרדת המיועדת
 להסברים בלבד (לעולם לא לחישוב).
 
-הפרויקט בנוי בשלבים (ראו `docs/DEVELOPMENT_PLAN.md`); **שלב 1 — תשתית —
-הושלם**.
+הפרויקט בנוי בשלבים (ראו `docs/DEVELOPMENT_PLAN.md`); **שלבים 1–2 הושלמו**
+(תשתית + ליבת ניהול תיק/עסקאות/Holdings Engine/Market Data).
 
 ## Stack
 
@@ -16,6 +16,8 @@ Hebrew RTL, מנועי חישוב פיננסיים דטרמיניסטיים, ו�
 - Zod לוולידציה
 - Vitest (unit) + Playwright (E2E)
 - Recharts לגרפים
+- Papa Parse (CSV) + ExcelJS (XLSX) לייבוא עסקאות
+- MarketDataProvider: Alpha Vantage (ברירת מחדל) + mock לפיתוח בלבד
 
 ## הרצה מקומית
 
@@ -69,22 +71,35 @@ tests/
 ראו `env.example`. שני משתנים חסרים במכוון (מפתחות API חיצוניים לא
 סופקו) אך שכבת ה-abstraction עבורם כבר קיימת במבנה התיקיות:
 
-- `MARKET_DATA_API_KEY` — יחובר ב-`src/lib/market/` (שלב 2)
+- `MARKET_DATA_API_KEY` — Alpha Vantage adapter מוכן, נופל בחזרה ל-mock
+  בפיתוח בלבד ללא key (`src/lib/market/`)
 - `AI_API_KEY` — יחובר ב-`src/lib/ai/` (שלב 10)
 
-## מגבלות ידועות (שלב 1)
+## מגבלות ידועות
 
-- מסכי Portfolio/Holdings/Performance/Risk/Scenarios/Optimization/
-  Watchlist/Investment Plan/Macro/Advisor הם placeholders בלבד (הניווט
-  מחובר במלואו; המימוש בפועל מגיע בשלבים 2–10 לפי `docs/DEVELOPMENT_PLAN.md`).
-- לא בוצע חיבור בפועל למסד נתונים/Supabase — נדרש `DATABASE_URL` אמיתי
-  כדי להריץ `db:push`/`db:seed`/`dev` בפועל.
+- מסכי Performance/Risk/Scenarios/Optimization/Watchlist/Investment
+  Plan/Macro/Advisor הם placeholders בלבד; `/securities/[ticker]` הוא
+  Skeleton (המימוש המלא מגיע בשלבים 3–10 לפי `docs/DEVELOPMENT_PLAN.md`).
+- לא בוצע חיבור בפועל למסד נתונים — נדרש `DATABASE_URL` אמיתי כדי להריץ
+  `db:push`/`db:seed`/`dev` ולבדוק את הזרימה המלאה (כולל בדיקות E2E).
 - shadcn/ui CLI לא היה נגיש מסביבת הרשת הזו (`ui.shadcn.com` חסום ע"י
   מדיניות הרשת); רכיבי `src/components/ui/*` נכתבו ידנית לפי אותה
   קונבנציה (Radix + `cva` + `cn`) כך ש-`npx shadcn add <component>` יעבוד
   כרגיל בהמשך.
-- בדיקות E2E (Playwright) מוגדרות אך לא הורצו בפועל בסביבה זו (דורשות
-  DB מאותחל ומחובר).
+- **XLSX**: נבחר `exceljs` במקום `xlsx` (SheetJS) — לחבילת `xlsx` בגרסת
+  ה-npm הנוכחית יש שתי חולשות אבטחה בחומרה "high" (Prototype Pollution +
+  ReDoS) הרלוונטיות בדיוק לניתוח קבצים שמשתמשים מעלים. `exceljs` נושא
+  חולשה טרנזיטיבית "moderate" (uuid) שאינה נגישה דרך נתיב ניתוח הקובץ.
+- ייבוא CSV/XLSX הוא Stateless בין שלבי ה-Wizard (השורות המפוענחות עוברות
+  הלוך-חזור ב-JSON בין הלקוח לשרת, לא נשמרות ב-DB כ-"pending import") —
+  פשוט ומספיק לגודל תיק אישי טיפוסי (מוגבל ל-2000 שורות), אך לא מתאים
+  לקבצים ענקיים.
+- Holdings Engine מניח שכל העסקאות של נייר נתון עקביות מספיק כדי לחשב
+  עלות ממוצעת יחידה (`costCurrency`); עסקה במטבע שונה מטופלת ומומרת, אך
+  אם חסר שער חליפין להמרה — הנייר מסומן ב-warning ולא נכלל בחישובי
+  Base Currency (לעולם לא מאופס בשקט).
+- בדיקות E2E (Playwright) נכתבו (`tests/e2e/`) אך לא הורצו בפועל בסביבה
+  זו (דורשות DB מאותחל, seed, ושרת dev פעיל).
 
 הצהרה: המערכת מספקת כלי ניתוח ותמיכה בקבלת החלטות ואינה מהווה ייעוץ
 השקעות.
